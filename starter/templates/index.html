@@ -1,17 +1,51 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sudoku Game</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <h1>Sudoku Game</h1>
-  <div id="sudoku-board"></div>
-  <div class="controls">
-    <button id="new-game">New Game</button>
-    <button id="check-solution">Check Solution</button>
-    <span id="message"></span>
+  <div class="app-shell">
+    <header class="header-row">
+      <div>
+        <p class="eyebrow">Daily puzzle challenge</p>
+        <h1>Sudoku Game</h1>
+      </div>
+      <button id="theme-toggle" type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark mode">Dark Mode</button>
+    </header>
+
+    <main class="game-layout">
+      <section class="board-card" aria-label="Sudoku board">
+        <div id="sudoku-board"></div>
+      </section>
+
+      <section class="side-panel" aria-label="Game controls and leaderboard">
+        <div class="controls-card">
+          <div class="controls">
+            <label for="difficulty-select">Difficulty</label>
+            <select id="difficulty-select" aria-label="Select puzzle difficulty">
+              <option value="Easy">Easy</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+            <button id="new-game" type="button">New Game</button>
+            <button id="hint" type="button">Hint</button>
+            <button id="check-solution" type="button">Check Puzzle</button>
+            <div class="status-row">
+              <span id="timer-display">Time: 00:00</span>
+              <span id="message" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="leaderboard">
+          <h2>Top 10 Leaderboard</h2>
+          <ol id="leaderboard-list"></ol>
+        </div>
+      </section>
+    </main>
   </div>
   <script src="/static/main.js"></script>
 </body>

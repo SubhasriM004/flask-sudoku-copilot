@@ -32,6 +32,36 @@ def is_safe(board, row, col, num):
     return True
 
 
+def find_conflicts(board):
+    conflicts = set()
+
+    for row in range(SIZE):
+        for col in range(SIZE):
+            value = board[row][col]
+            if value == EMPTY:
+                continue
+
+            for other_col in range(SIZE):
+                if other_col != col and board[row][other_col] == value:
+                    conflicts.add((row, col))
+                    conflicts.add((row, other_col))
+
+            for other_row in range(SIZE):
+                if other_row != row and board[other_row][col] == value:
+                    conflicts.add((row, col))
+                    conflicts.add((other_row, col))
+
+            start_row = (row // 3) * 3
+            start_col = (col // 3) * 3
+            for box_row in range(start_row, start_row + 3):
+                for box_col in range(start_col, start_col + 3):
+                    if (box_row, box_col) != (row, col) and board[box_row][box_col] == value:
+                        conflicts.add((row, col))
+                        conflicts.add((box_row, box_col))
+
+    return [[row, col] for row, col in sorted(conflicts)]
+
+
 def fill_board(board):
     for row in range(SIZE):
         for col in range(SIZE):

@@ -75,6 +75,20 @@ def test_check_solution_returns_solved_state_for_correct_board(client):
     assert app_module.CURRENT["timer_running"] is False
 
 
+def test_check_solution_returns_conflicts_alongside_incorrect_cells(client):
+    puzzle, solution = sudoku_logic.generate_puzzle(35)
+    app_module.CURRENT["puzzle"] = puzzle
+    app_module.CURRENT["solution"] = solution
+
+    board = [row[:] for row in solution]
+    board[0][0] = board[0][1]
+
+    response = client.post("/check", json={"board": board})
+    assert response.status_code == 200
+    assert response.get_json()["incorrect"] == [[0, 0]]
+    assert [0, 1] in response.get_json()["conflicts"]
+
+
 def test_hint_returns_solution_value_and_marks_cell_locked(client):
     puzzle, solution = sudoku_logic.generate_puzzle(35)
     app_module.CURRENT["puzzle"] = puzzle
@@ -114,6 +128,30 @@ def test_generated_puzzle_is_validated_as_having_a_unique_solution():
     assert sudoku_logic.is_unique_solution(puzzle)
     assert sudoku_logic.count_solutions(puzzle) == 1
     assert solution is not None
+
+
+def test_validate_endpoint_reports_conflicting_cells(client):
+    board = [[0 for _ in range(sudoku_logic.SIZE)] for _ in range(sudoku_logic.SIZE)]
+    board[0][0] = 1
+    board[0][1] = 1
+
+    response = client.post("/validate", json={"board": board})
+    assert response.status_code == 200
+    assert set(tuple(cell) for cell in response.get_json()["conflicts"]) == {(0, 0), (0, 1)}
+
+
+def test_validate_endpoint_returns_conflicts_for_duplicate_entries(client):
+    puzzle, solution = sudoku_logic.generate_puzzle(35)
+    app_module.CURRENT["puzzle"] = puzzle
+    app_module.CURRENT["solution"] = solution
+
+    board = [row[:] for row in puzzle]
+    board[0][0] = 5
+    board[0][1] = 5
+
+    response = client.post("/validate", json={"board": board})
+    assert response.status_code == 200
+    assert [0, 0] in response.get_json()["conflicts"]
 
 
 def test_leaderboard_endpoint_adds_and_sorts_entries(client):

@@ -31,6 +31,22 @@ def new_game():
     })
 
 
+@bp.route("/validate", methods=["POST"])
+def validate_board():
+    data = request.get_json(silent=True) or {}
+    board = data.get("board")
+
+    if not isinstance(board, list) or len(board) != sudoku_logic.SIZE:
+        return jsonify({"error": "Invalid board"}), 400
+
+    for row in board:
+        if not isinstance(row, list) or len(row) != sudoku_logic.SIZE:
+            return jsonify({"error": "Invalid board"}), 400
+
+    conflicts = sudoku_logic.find_conflicts(board)
+    return jsonify({"conflicts": conflicts})
+
+
 @bp.route("/check", methods=["POST"])
 def check_solution():
     data = request.json
@@ -45,6 +61,8 @@ def check_solution():
             if board[i][j] != solution[i][j]:
                 incorrect.append([i, j])
 
+    conflicts = sudoku_logic.find_conflicts(board)
+
     if len(incorrect) == 0:
         CURRENT["timer_running"] = False
     else:
@@ -52,6 +70,7 @@ def check_solution():
 
     return jsonify({
         "incorrect": incorrect,
+        "conflicts": conflicts,
         "solved": len(incorrect) == 0,
         "timer": {
             "elapsed_seconds": CURRENT.get("elapsed_seconds", 0),

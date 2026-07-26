@@ -8,6 +8,9 @@ let timerInterval = null;
 let elapsedSeconds = 0;
 let leaderboardEntries = [];
 let scoreRecordedForCurrentGame = false;
+let hintedCellIndexes = new Set();
+let liveConflictIndexes = new Set();
+let checkConflictIndexes = new Set();
 
 function getPreferredTheme() {
   try {
@@ -169,6 +172,78 @@ async function addLeaderboardEntry(playerName, completionTime, difficulty) {
   }
 }
 
+function collectBoardFromInputs() {
+  const boardDiv = document.getElementById('sudoku-board');
+  const inputs = boardDiv ? boardDiv.getElementsByTagName('input') : [];
+  const board = [];
+  for (let i = 0; i < SIZE; i++) {
+    board[i] = [];
+    for (let j = 0; j < SIZE; j++) {
+      const idx = i * SIZE + j;
+      const val = inputs[idx].value;
+      board[i][j] = val ? parseInt(val, 10) : 0;
+    }
+  }
+  return board;
+}
+
+function applyBoardVisualState({ conflictIndexes = [], hintIndexes = [] } = {}) {
+  const boardDiv = document.getElementById('sudoku-board');
+  if (!boardDiv) {
+    return;
+  }
+
+  const inputs = boardDiv.getElementsByTagName('input');
+  const hintSet = new Set((hintIndexes || []).map((value) => Number(value)));
+  const conflictSet = new Set((conflictIndexes || []).map((value) => Number(value)));
+
+  for (let idx = 0; idx < inputs.length; idx++) {
+    const inp = inputs[idx];
+    const classes = ['sudoku-cell'];
+
+    if (inp.disabled) {
+      classes.push('prefilled');
+    }
+
+    if (hintSet.has(idx)) {
+      classes.push('hint');
+    }
+
+    if (conflictSet.has(idx)) {
+      classes.push('live-conflict');
+    }
+
+    inp.className = classes.join(' ');
+  }
+}
+
+async function validateBoardLive() {
+  const board = collectBoardFromInputs();
+
+  try {
+    const res = await fetch('/validate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({board}),
+    });
+    const data = await res.json();
+    const conflicts = Array.isArray(data.conflicts) ? data.conflicts : [];
+    const conflictIndexes = conflicts.map(([row, col]) => row * SIZE + col);
+    const activeIndex = Number(document.activeElement?.dataset?.row) * SIZE + Number(document.activeElement?.dataset?.col);
+    liveConflictIndexes = new Set(conflictIndexes.includes(activeIndex) ? [activeIndex] : []);
+    applyBoardVisualState({
+      conflictIndexes: [...liveConflictIndexes, ...checkConflictIndexes],
+      hintIndexes: [...hintedCellIndexes],
+    });
+  } catch (error) {
+    liveConflictIndexes.clear();
+    applyBoardVisualState({
+      conflictIndexes: [...checkConflictIndexes],
+      hintIndexes: [...hintedCellIndexes],
+    });
+  }
+}
+
 function createBoardElement() {
   const boardDiv = document.getElementById('sudoku-board');
   boardDiv.innerHTML = '';
@@ -184,9 +259,16 @@ function createBoardElement() {
       input.dataset.col = j;
       input.dataset.square = `${Math.floor(i / 3) * 3 + Math.floor(j / 3)}`;
       input.setAttribute('aria-label', `Row ${i + 1}, Column ${j + 1}`);
-      input.addEventListener('input', (e) => {
+      input.addEventListener('input', async (e) => {
         const val = e.target.value.replace(/[^1-9]/g, '');
         e.target.value = val;
+        const row = Number(e.target.dataset.row);
+        const col = Number(e.target.dataset.col);
+        const idx = row * SIZE + col;
+        if (hintedCellIndexes.has(idx)) {
+          hintedCellIndexes.delete(idx);
+        }
+        await validateBoardLive();
       });
       rowDiv.appendChild(input);
     }
@@ -209,23 +291,27 @@ function renderPuzzle(puz, locked = []) {
       if (val !== 0) {
         inp.value = val;
         inp.disabled = true;
-        inp.className = 'sudoku-cell prefilled';
       } else {
         inp.value = '';
         inp.disabled = false;
-        inp.className = 'sudoku-cell';
       }
       if (isLocked && val !== 0) {
         inp.disabled = true;
-        inp.className = 'sudoku-cell prefilled';
       }
     }
   }
+
+  liveConflictIndexes.clear();
+  checkConflictIndexes.clear();
+  applyBoardVisualState({ conflictIndexes: [], hintIndexes: [...hintedCellIndexes] });
 }
 
 async function newGame() {
   const difficulty = document.getElementById('difficulty-select').value;
   scoreRecordedForCurrentGame = false;
+  hintedCellIndexes.clear();
+  liveConflictIndexes.clear();
+  checkConflictIndexes.clear();
   const res = await fetch(`/new?difficulty=${encodeURIComponent(difficulty)}`);
   const data = await res.json();
   renderPuzzle(data.puzzle);
@@ -264,6 +350,9 @@ async function hint() {
     msg.innerText = data.error;
     return;
   }
+  if (data.row !== undefined && data.col !== undefined) {
+    hintedCellIndexes.add(data.row * SIZE + data.col);
+  }
   renderPuzzle(data.puzzle, data.locked_cells || []);
   msg.style.color = 'var(--message-success)';
   msg.innerText = 'Hint applied.';
@@ -296,20 +385,13 @@ async function checkSolution() {
     return;
   }
 
-  const incorrect = new Set((data.incorrect || []).map(x => x[0] * SIZE + x[1]));
-  for (let idx = 0; idx < inputs.length; idx++) {
-    const inp = inputs[idx];
-    if (inp.disabled) {
-      continue;
-    }
+  const conflicts = Array.isArray(data.conflicts) ? data.conflicts : [];
+  const conflictIndexes = conflicts.map(([row, col]) => row * SIZE + col);
+  checkConflictIndexes = new Set(conflictIndexes);
+  liveConflictIndexes.clear();
+  applyBoardVisualState({ conflictIndexes: [...checkConflictIndexes], hintIndexes: [...hintedCellIndexes] });
 
-    inp.className = 'sudoku-cell';
-    if (incorrect.has(idx)) {
-      inp.className = 'sudoku-cell incorrect';
-    }
-  }
-
-  if (incorrect.size === 0) {
+  if (conflicts.length === 0) {
     stopTimer();
     if (!scoreRecordedForCurrentGame) {
       const playerName = window.prompt('Enter your name for the leaderboard:');

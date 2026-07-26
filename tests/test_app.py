@@ -154,26 +154,38 @@ def test_validate_endpoint_returns_conflicts_for_duplicate_entries(client):
     assert [0, 0] in response.get_json()["conflicts"]
 
 
-def test_leaderboard_endpoint_adds_and_sorts_entries(client):
+def test_leaderboard_endpoint_sorts_by_completion_time_then_hints_used(client):
     app_module.CURRENT["leaderboard"] = []
 
     first_response = client.post(
         "/leaderboard",
-        json={"player_name": "Ava", "completion_time": 90, "difficulty": "Easy"},
+        json={"player_name": "Ava", "completion_time": 90, "difficulty": "Easy", "hints_used": 2},
     )
     assert first_response.status_code == 200
     assert first_response.get_json()["leaderboard"][0]["player_name"] == "Ava"
 
     second_response = client.post(
         "/leaderboard",
-        json={"player_name": "Ben", "completion_time": 60, "difficulty": "Hard"},
+        json={"player_name": "Ben", "completion_time": 60, "difficulty": "Hard", "hints_used": 1},
     )
 
     assert second_response.status_code == 200
     leaderboard = second_response.get_json()["leaderboard"]
     assert leaderboard[0]["player_name"] == "Ben"
     assert leaderboard[0]["completion_time"] == 60
+    assert leaderboard[0]["hints_used"] == 1
     assert leaderboard[1]["player_name"] == "Ava"
+
+    third_response = client.post(
+        "/leaderboard",
+        json={"player_name": "Cara", "completion_time": 60, "difficulty": "Medium", "hints_used": 3},
+    )
+
+    assert third_response.status_code == 200
+    leaderboard = third_response.get_json()["leaderboard"]
+    assert leaderboard[0]["player_name"] == "Ben"
+    assert leaderboard[1]["player_name"] == "Cara"
+    assert leaderboard[1]["hints_used"] == 3
 
 
 def test_leaderboard_endpoint_stores_hint_count(client):

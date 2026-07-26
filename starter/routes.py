@@ -160,7 +160,13 @@ def leaderboard():
         }
         leaderboard_entries = CURRENT.get("leaderboard", [])
         leaderboard_entries.append(entry)
-        leaderboard_entries = sorted(leaderboard_entries, key=lambda item: item["completion_time"])
+        leaderboard_entries = sorted(
+            leaderboard_entries,
+            key=lambda item: (
+                item.get("completion_time", 0),
+                item.get("hints_used", 0),
+            ),
+        )
         CURRENT["leaderboard"] = leaderboard_entries[:10]
         return jsonify({"leaderboard": CURRENT["leaderboard"]})
 

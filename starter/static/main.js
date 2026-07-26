@@ -152,7 +152,13 @@ async function addLeaderboardEntry(playerName, completionTime, difficulty) {
   };
 
   const updatedEntries = [...leaderboardEntries, entry]
-    .sort((a, b) => a.completion_time - b.completion_time)
+    .sort((a, b) => {
+      const timeDiff = (a.completion_time ?? 0) - (b.completion_time ?? 0);
+      if (timeDiff !== 0) {
+        return timeDiff;
+      }
+      return (a.hints_used ?? 0) - (b.hints_used ?? 0);
+    })
     .slice(0, 10);
   leaderboardEntries = updatedEntries;
   saveLeaderboardToStorage(leaderboardEntries);

@@ -108,6 +108,8 @@ def get_hint():
     if not empty_cells:
         return jsonify({"error": "No empty cells remaining"}), 400
 
+    CURRENT["hints_used"] = CURRENT.get("hints_used", 0) + 1
+
     row, col = empty_cells[0]
     value = solution[row][col]
     board[row][col] = value
@@ -135,6 +137,7 @@ def leaderboard():
         player_name = (data.get("player_name") or "").strip() or "Player"
         completion_time = data.get("completion_time")
         difficulty = (data.get("difficulty") or "Medium").strip() or "Medium"
+        hints_used = data.get("hints_used", CURRENT.get("hints_used", 0))
 
         if completion_time is None:
             return jsonify({"error": "completion_time is required"}), 400
@@ -144,10 +147,16 @@ def leaderboard():
         except (TypeError, ValueError):
             return jsonify({"error": "completion_time must be an integer"}), 400
 
+        try:
+            hints_used = int(hints_used)
+        except (TypeError, ValueError):
+            hints_used = 0
+
         entry = {
             "player_name": player_name,
             "completion_time": completion_time,
             "difficulty": difficulty,
+            "hints_used": hints_used,
         }
         leaderboard_entries = CURRENT.get("leaderboard", [])
         leaderboard_entries.append(entry)

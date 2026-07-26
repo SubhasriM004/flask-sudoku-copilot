@@ -9,6 +9,7 @@ let elapsedSeconds = 0;
 let leaderboardEntries = [];
 let scoreRecordedForCurrentGame = false;
 let hintedCellIndexes = new Set();
+let hintsUsed = 0;
 let liveConflictIndexes = new Set();
 let checkConflictIndexes = new Set();
 
@@ -118,7 +119,8 @@ function renderLeaderboard(entries = leaderboardEntries) {
 
   entries.forEach((entry, index) => {
     const item = document.createElement('li');
-    item.innerText = `${index + 1}. ${entry.player_name} — ${formatTime(entry.completion_time)} — ${entry.difficulty}`;
+    const hintsUsedValue = entry.hints_used !== undefined ? entry.hints_used : 0;
+    item.innerText = `${index + 1}. Player Name: ${entry.player_name} | Completion Time: ${formatTime(entry.completion_time)} | Difficulty: ${entry.difficulty} | Hints Used: ${hintsUsedValue}`;
     listEl.appendChild(item);
   });
 }
@@ -146,6 +148,7 @@ async function addLeaderboardEntry(playerName, completionTime, difficulty) {
     player_name: playerName,
     completion_time: completionTime,
     difficulty,
+    hints_used: hintsUsed,
   };
 
   const updatedEntries = [...leaderboardEntries, entry]
@@ -310,6 +313,7 @@ async function newGame() {
   const difficulty = document.getElementById('difficulty-select').value;
   scoreRecordedForCurrentGame = false;
   hintedCellIndexes.clear();
+  hintsUsed = 0;
   liveConflictIndexes.clear();
   checkConflictIndexes.clear();
   const res = await fetch(`/new?difficulty=${encodeURIComponent(difficulty)}`);
@@ -352,6 +356,7 @@ async function hint() {
   }
   if (data.row !== undefined && data.col !== undefined) {
     hintedCellIndexes.add(data.row * SIZE + data.col);
+    hintsUsed += 1;
   }
   renderPuzzle(data.puzzle, data.locked_cells || []);
   msg.style.color = 'var(--message-success)';
@@ -394,7 +399,8 @@ async function checkSolution() {
   if (conflicts.length === 0) {
     stopTimer();
     if (!scoreRecordedForCurrentGame) {
-      const playerName = window.prompt('Enter your name for the leaderboard:');
+      const playerNameInput = document.getElementById('player-name');
+      const playerName = playerNameInput ? playerNameInput.value : '';
       const name = (playerName || '').trim() || 'Player';
       await addLeaderboardEntry(name, elapsedSeconds, document.getElementById('difficulty-select').value);
       scoreRecordedForCurrentGame = true;

@@ -174,3 +174,15 @@ def test_leaderboard_endpoint_adds_and_sorts_entries(client):
     assert leaderboard[0]["player_name"] == "Ben"
     assert leaderboard[0]["completion_time"] == 60
     assert leaderboard[1]["player_name"] == "Ava"
+
+
+def test_leaderboard_endpoint_stores_hint_count(client):
+    app_module.CURRENT["leaderboard"] = []
+
+    response = client.post(
+        "/leaderboard",
+        json={"player_name": "Cara", "completion_time": 75, "difficulty": "Medium", "hints_used": 3},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["leaderboard"][0]["hints_used"] == 3

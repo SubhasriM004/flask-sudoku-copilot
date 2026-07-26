@@ -114,8 +114,12 @@ def count_solutions(board, limit=2):
     return count
 
 
-def is_unique_solution(board):
+def has_single_solution(board):
     return count_solutions(board, limit=2) == 1
+
+
+def is_unique_solution(board):
+    return has_single_solution(board)
 
 
 def normalize_difficulty(difficulty):
@@ -152,10 +156,10 @@ def generate_puzzle(clues=35, difficulty=None):
 
         original = puzzle[row][col]
         puzzle[row][col] = EMPTY
-        if not is_unique_solution(puzzle):
+        if not has_single_solution(puzzle):
             puzzle[row][col] = original
 
-    if not is_unique_solution(puzzle):
+    if not has_single_solution(puzzle):
         return generate_puzzle(clues=clues, difficulty=difficulty)
 
     return puzzle, solution

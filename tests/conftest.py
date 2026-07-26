@@ -9,20 +9,32 @@ STARTER_DIR = PROJECT_ROOT / "starter"
 if str(STARTER_DIR) not in sys.path:
     sys.path.insert(0, str(STARTER_DIR))
 
-import app as app_module
+from app_factory import create_app
+from utils import CURRENT
 
 
 @pytest.fixture()
 def client():
-    app_module.app.config.update(TESTING=True)
-    with app_module.app.test_client() as test_client:
+    app = create_app()
+    app.config.update(TESTING=True)
+    with app.test_client() as test_client:
         yield test_client
 
 
 @pytest.fixture(autouse=True)
 def reset_game_state():
-    app_module.CURRENT["puzzle"] = None
-    app_module.CURRENT["solution"] = None
+    CURRENT["puzzle"] = None
+    CURRENT["solution"] = None
+    CURRENT["locked_cells"] = []
+    CURRENT["timer_running"] = False
+    CURRENT["elapsed_seconds"] = 0
+    CURRENT["leaderboard"] = []
+    CURRENT["hints_used"] = 0
     yield
-    app_module.CURRENT["puzzle"] = None
-    app_module.CURRENT["solution"] = None
+    CURRENT["puzzle"] = None
+    CURRENT["solution"] = None
+    CURRENT["locked_cells"] = []
+    CURRENT["timer_running"] = False
+    CURRENT["elapsed_seconds"] = 0
+    CURRENT["leaderboard"] = []
+    CURRENT["hints_used"] = 0

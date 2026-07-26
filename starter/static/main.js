@@ -396,21 +396,29 @@ async function checkSolution() {
   liveConflictIndexes.clear();
   applyBoardVisualState({ conflictIndexes: [...checkConflictIndexes], hintIndexes: [...hintedCellIndexes] });
 
-  if (conflicts.length === 0) {
+  if (data.solved === true) {
     stopTimer();
+
     if (!scoreRecordedForCurrentGame) {
-      const playerNameInput = document.getElementById('player-name');
-      const playerName = playerNameInput ? playerNameInput.value : '';
-      const name = (playerName || '').trim() || 'Player';
-      await addLeaderboardEntry(name, elapsedSeconds, document.getElementById('difficulty-select').value);
-      scoreRecordedForCurrentGame = true;
+        const playerNameInput = document.getElementById('player-name');
+        const playerName = playerNameInput ? playerNameInput.value : '';
+        const name = (playerName || '').trim() || 'Player';
+
+        await addLeaderboardEntry(
+            name,
+            elapsedSeconds,
+            document.getElementById('difficulty-select').value
+        );
+
+        scoreRecordedForCurrentGame = true;
     }
+
     msg.style.color = 'var(--message-success)';
     msg.innerText = 'Congratulations! You solved it!';
-  } else {
+} else {
     msg.style.color = 'var(--message-error)';
-    msg.innerText = 'Some cells are incorrect.';
-  }
+    msg.innerText = 'Some cells are incomplete or incorrect.';
+}
 }
 
 // Wire buttons
